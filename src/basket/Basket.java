@@ -2,10 +2,12 @@ package basket;
 
 import java.io.*;
 
-public class Basket {
+public class Basket implements Serializable {
 
-    protected String[][] productsList;
-    protected int[] itemsInCart;
+    private static final long serialVersionUID = 1L;
+
+    protected String[][] productsList; // двумерный массив-список товаров с ценами, доступных к покупке
+    protected int[] itemsInCart; // массив количества каждого товара в корзине
     protected int bill = 0;
 
 
@@ -23,44 +25,36 @@ public class Basket {
         System.out.println("Ваша корзина покупок:");
         for (int i = 0; i < itemsInCart.length; i++) {
             if (itemsInCart[i] != 0) {
-                System.out.println(productsList[i][0] + ", " + productsList[i][1] + " руб/шт: " + itemsInCart[i] + " шт, " + (Integer.parseInt(productsList[i][1]) * itemsInCart[i]) + " руб");
+                System.out.println(productsList[i][0] + ", " + productsList[i][1] + " руб/шт: "
+                        + itemsInCart[i] + " шт, " + (Integer.parseInt(productsList[i][1]) * itemsInCart[i]) + " руб");
             }
         }
         System.out.println("Общая стоимость: " + bill);
     }
 
-    public void saveTxt(File textFile) {
-        try (BufferedWriter saveCartToFile = new BufferedWriter(new FileWriter(textFile))) {
-            for (int i = 0; i < itemsInCart.length; i++) {
-                if (itemsInCart[i] != 0) {
-                    saveCartToFile.write((productsList[i][0] + ": " + itemsInCart[i] + " шт, " + Integer.parseInt(productsList[i][1]) * itemsInCart[i]) + " руб");
-                    saveCartToFile.append("\n");
-                    saveCartToFile.flush();
-                }
-            }
+    public void saveBin(File file) {
+        try (FileOutputStream outputStream = new FileOutputStream(file);
+             ObjectOutputStream objOutStream = new ObjectOutputStream(outputStream)) {
+            objOutStream.writeObject(this);
+        } catch (FileNotFoundException e) {
+            System.out.println(e.getMessage());
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public static String[][] loadFromFile(File textFile) {
-        String dataFromFile = "";
-        try (BufferedReader loadCartFromFile = new BufferedReader(new FileReader(textFile))) {
-            String s;
-            while (true) {
-                if ((s = loadCartFromFile.readLine()) == null) break;
-                dataFromFile += s + "\n";
-            }
+    public static Basket loadFromBinFile(File file) {
+        Basket basket = null;
+        try (FileInputStream inputStream = new FileInputStream(file);
+             ObjectInputStream objInpStream = new ObjectInputStream(inputStream)) {
+            basket = (Basket) objInpStream.readObject();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
-        String[] splitLines = dataFromFile.split("\\n");
-        String[][] productsListFromFile = new String[splitLines.length][2];
-        for (int i = 0; i < splitLines.length; i++) {
-            String[] split = splitLines[i].split(": |, | ");
-            productsListFromFile[i][0] = split[0];
-            productsListFromFile[i][1] = split[1];
-        }
-        return productsListFromFile;
+        return basket;
     }
 }
