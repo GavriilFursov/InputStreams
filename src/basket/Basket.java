@@ -1,13 +1,20 @@
 package basket;
 
+import com.google.gson.Gson;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
 import java.io.*;
+import java.util.Scanner;
 
 public class Basket implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    protected String[][] productsList; // двумерный массив-список товаров с ценами, доступных к покупке
-    protected int[] itemsInCart; // массив количества каждого товара в корзине
+    protected String[][] productsList;
+    protected int[] itemsInCart;
     protected int bill = 0;
 
 
@@ -32,29 +39,79 @@ public class Basket implements Serializable {
         System.out.println("Общая стоимость: " + bill);
     }
 
-    public void saveBin(File file) {
-        try (FileOutputStream outputStream = new FileOutputStream(file);
-             ObjectOutputStream objOutStream = new ObjectOutputStream(outputStream)) {
-            objOutStream.writeObject(this);
+    public void saveJSON(File jsonFile) {
+        JSONObject jsonObject = new JSONObject();
+        JSONArray basketList = new JSONArray();
+        for (int i = 0; i < itemsInCart.length; i++) {
+            String s = (itemsInCart[i] + " шт, " +
+                    Integer.parseInt(productsList[i][1]) * itemsInCart[i]) + " руб";
+            basketList.add(s);
+            jsonObject.put(productsList[i][0], basketList.get(i));
+        }
+        try (BufferedWriter saveCartToFile = new BufferedWriter(new FileWriter(jsonFile))) {
+            saveCartToFile.write(jsonObject.toJSONString());
+            saveCartToFile.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static String[][] loadFromJSON (File jsonFile) throws FileNotFoundException {
+        JSONParser parser = new JSONParser();
+        String jsonLine = "";
+        try {
+            Object obj = parser.parse(new FileReader(jsonFile));
+            JSONObject jsonObject = (JSONObject) obj;
+            jsonLine = jsonObject.toJSONString();
         } catch (FileNotFoundException e) {
-            System.out.println(e.getMessage());
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        String [] splitLines = jsonLine.split("\",\"");
+        String[][] productsListFromFile = new String[splitLines.length][2];
+        try(Scanner scanner = new Scanner(jsonFile)){
+            String json = scanner.nextLine();
+            Gson gson = new Gson();
+            return gson.fromJson(json, String[][].class);
+        }
+    }
+
+    public void saveTxt(File textFile) {
+        try (BufferedWriter saveCartToFile = new BufferedWriter(new FileWriter(textFile))) {
+            for (int i = 0; i < itemsInCart.length; i++) {
+                if (itemsInCart[i] != 0) {
+                    saveCartToFile.write((productsList[i][0] + ": " +
+                            itemsInCart[i] + " шт, " +
+                            Integer.parseInt(productsList[i][1]) * itemsInCart[i]) + " руб");
+                    saveCartToFile.append("\n");
+                    saveCartToFile.flush();
+                }
+            }
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
     }
-
-    public static Basket loadFromBinFile(File file) {
-        Basket basket = null;
-        try (FileInputStream inputStream = new FileInputStream(file);
-             ObjectInputStream objInpStream = new ObjectInputStream(inputStream)) {
-            basket = (Basket) objInpStream.readObject();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+    public static String[][] loadFromFile(File textFile) {
+        String dataFromFile = "";
+        try (BufferedReader loadCartFromFile = new BufferedReader(new FileReader(textFile))) {
+            String s;
+            while (true) {
+                if ((s = loadCartFromFile.readLine()) == null) break;
+                dataFromFile += s + "\n";
+            }
         } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
         }
-        return basket;
+        String[] splitLines = dataFromFile.split("\\n");
+        String[][] productsListFromFile = new String[splitLines.length][2];
+        for (int i = 0; i < splitLines.length; i++) {
+            String[] split = splitLines[i].split(": |, | ");
+            productsListFromFile[i][0] = split[0];
+            productsListFromFile[i][1] = split[1];
+        }
+        return productsListFromFile;
     }
 }

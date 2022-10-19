@@ -1,7 +1,9 @@
 *.iml
-.idea/
-*.class
-out/
-target/
-*.txt
-*.bin
+/.idea/
+/out/
+basket.txt
+basket.bin
+basket.json
+log.csv
+client.csv
+/target/
